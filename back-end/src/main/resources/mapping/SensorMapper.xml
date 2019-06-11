@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zpj.chinavis.dao.SensorMapper">
+  <resultMap id="BaseResultMap" type="com.zpj.chinavis.model.Sensor">
+    <id column="sid" jdbcType="INTEGER" property="sid" />
+    <result column="floor" jdbcType="INTEGER" property="floor" />
+    <result column="x" jdbcType="INTEGER" property="x" />
+    <result column="y" jdbcType="INTEGER" property="y" />
+    <result column="layout" jdbcType="VARCHAR" property="layout" />
+  </resultMap>
+
+  <resultMap id="LayoutResultMap" type="java.lang.String">
+    <result column="layout" jdbcType="VARCHAR" property="layout" />
+  </resultMap>
+
+  <sql id="Base_Column_List">
+    sid, floor, x, y, layout
+  </sql>
+
+  <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+    select 
+    <include refid="Base_Column_List" />
+    from sensor
+    where sid = #{sid,jdbcType=INTEGER}
+  </select>
+
+  <select id="selectAll" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from sensor
+  </select>
+
+  <select id="selectLayoutNotNull" resultMap="BaseResultMap">
+    select
+    <include refid="Base_Column_List" />
+    from sensor
+    WHERE layout IS NOT NULL
+    ORDER BY FLOOR, X, Y
+
+
+  </select>  <select id="selectAllLayouts" resultMap="LayoutResultMap">
+    select
+    DISTINCT layout
+    from sensor
+    ORDER BY FLOOR, X, Y
+  </select>
+
+</mapper>

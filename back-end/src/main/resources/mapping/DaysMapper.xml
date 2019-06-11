@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zpj.chinavis.dao.DaysMapper">
+    <resultMap id="BaseResultMap" type="com.zpj.chinavis.model.Days">
+        <result column="id" jdbcType="INTEGER" property="id"/>
+        <result column="sid" jdbcType="INTEGER" property="sid"/>
+        <result column="time" jdbcType="INTEGER" property="time"/>
+        <result column="day" jdbcType="INTEGER" property="day"/>
+    </resultMap>
+    <!--仅人员-->
+    <resultMap id="ConfereeResultMap" type="java.lang.Integer">
+        <result column="id" jdbcType="INTEGER" property="id"/>
+    </resultMap>
+
+    <!--仅时间节点-->
+    <resultMap id="TimeResultMap" type="java.lang.Integer">
+        <result column="time" jdbcType="INTEGER" property="time"/>
+    </resultMap>
+    <!--最值时间-->
+    <resultMap id="MinMaxTimeResultMap" type="java.lang.Integer">
+        <result column="time" jdbcType="INTEGER" property="time"/>
+    </resultMap>
+
+    <!--人流量-->
+    <resultMap id="ConfereeNumResultMap" type="com.zpj.chinavis.model.Layout_Count">
+        <result column="layout" jdbcType="VARCHAR" property="layout"/>
+        <result column="num" jdbcType="VARCHAR" property="num"/>
+    </resultMap>
+
+    <!--所有记录，带有layout信息-->
+    <resultMap id="WithLayoutResultMap" type="com.zpj.chinavis.model.Days_Layout">
+        <result column="id" jdbcType="INTEGER" property="id"/>
+        <result column="time" jdbcType="INTEGER" property="inTime"/>
+        <result column="day" jdbcType="INTEGER" property="day"/>
+        <result column="layout" jdbcType="VARCHAR" property="layout"/>
+    </resultMap>
+
+    <!--所有记录，带有layout信息-->
+    <resultMap id="DaysLayoutResultMap" type="com.zpj.chinavis.model.Days_Layout">
+        <result column="id" jdbcType="INTEGER" property="id"/>
+        <result column="inTime" jdbcType="INTEGER" property="inTime"/>
+        <result column="outTime" jdbcType="INTEGER" property="outTime"/>
+        <result column="day" jdbcType="INTEGER" property="day"/>
+        <result column="layout" jdbcType="VARCHAR" property="layout"/>
+    </resultMap>
+
+    <!--所有记录-->
+    <select id="selectDays" parameterType="com.zpj.chinavis.model.Days" resultMap="BaseResultMap">
+        SELECT * FROM days
+        WHERE 1 = 1
+        <if test="id!=null">
+            AND id = #{id}
+        </if>
+        <if test="sid!=null">
+            AND sid = #{sid}
+        </if>
+        <if test="day!=null">
+            AND day = #{day}
+        </if>
+        <if test="time!=null">
+            AND time = #{time}
+        </if>
+        ORDER BY day,time,sid ASC
+    </select>
+    <!--所有人员-->
+    <select id="selectAllConferees" resultMap="ConfereeResultMap">
+        SELECT DISTINCT id
+        FROM days;
+    </select>
+
+    <!--按天选时间节点-->
+    <select id="selectTimeNodesByDay" resultMap="TimeResultMap">
+        SELECT DISTINCT time
+        FROM days
+        WHERE day = #{day}
+        ORDER BY time
+    </select>
+
+    <!--按天选所有人员-->
+    <select id="selectConfereesByDay" resultMap="ConfereeResultMap">
+        SELECT DISTINCT id
+        FROM days
+        WHERE day = #{day}
+        ORDER BY time
+    </select>
+
+    <!--按天选带有layout的Days数据-->
+    <select id="selectAllDaysWithLayoutByDayAndId" resultMap="WithLayoutResultMap">
+        SELECT
+            d.id,
+            d.day,
+            d.time,
+            s.layout
+        FROM days d
+            LEFT JOIN sensor s
+                ON d.sid = s.sid
+        WHERE d.day = #{arg0}
+              AND d.id = #{arg1}
+        ORDER BY d.time
+    </select>
+    <!--按天选带有layout的Days数据-->
+    <select id="selectAllDaysWithLayoutByDay" resultMap="WithLayoutResultMap">
+        SELECT
+            d.id,
+            d.day,
+            d.time,
+            s.layout
+        FROM days d
+            LEFT JOIN sensor s
+                ON d.sid = s.sid
+        WHERE d.day = #{arg0}
+        ORDER BY d.id, d.time
+    </select>
+
+
+    <!--插入-->
+    <insert id="insertCount" parameterType="java.util.Map">
+        INSERT INTO days_layout
+        VALUES
+        <foreach collection="map" index="key" item="list" separator=",">
+            <foreach collection="list" item="days" separator=",">
+                (#{days.id}, #{days.layout}, #{days.inTime}, #{days.outTime}, #{days.day})
+            </foreach>
+        </foreach>
+    </insert>
+
+    <!--所有 DaysLayout-->
+    <select id="selectAllDaysLayout" resultMap="DaysLayoutResultMap">
+        SELECT *
+        FROM days_layout
+    </select>
+    <select id="selectDaysLayoutByDay" resultMap="DaysLayoutResultMap">
+        SELECT *
+        FROM days_layout
+        WHERE day = #{day}
+    </select>
+    <!--按地点过滤-->
+    <select id="selectDaysLayoutByLayoutByDay" resultMap="DaysLayoutResultMap">
+        SELECT *
+        FROM days_layout
+        WHERE day = #{day}
+        <if test='layout != "all"'>
+            AND layout = #{layout}
+        </if>
+    </select>
+
+    <!--按时长过滤-->
+    <select id="getEveryoneSequence" resultMap="DaysLayoutResultMap">
+        SELECT *
+        FROM days_layout d
+        WHERE
+            (d.outTime - d.inTime) > #{filterTime}
+        ORDER BY d.id, d.day, d.inTime
+    </select>
+
+    <!--人流量-->
+    <select id="countConfereeNumByDay" resultMap="ConfereeNumResultMap">
+        SELECT
+            COUNT(id) AS num,
+            layout,
+            day,
+            #{node}   AS time
+        FROM days_layout
+        WHERE inTime
+              &lt;= #{node}
+              AND outTime &gt; #{node}
+              AND DAY = #{day}
+        GROUP BY layout
+    </select>
+
+    <!--每人每地时长-->
+    <select id="getEveryOneLayoutTime" resultMap="DaysLayoutResultMap">
+        SELECT *
+        FROM days_layout
+        WHERE layout = #{layout}
+    </select>
+
+    <!--最值时间-->
+    <select id="selectMinMaxTimeByDay" resultMap="MinMaxTimeResultMap">
+        SELECT min(time) AS time
+        FROM days
+        WHERE day = #{day}
+        UNION
+        SELECT max(time) AS time
+        FROM days
+        WHERE day = #{day}
+    </select>
+
+    <!--流量分析-->
+    <select id="selectIdSidByTimeByDay" resultMap="BaseResultMap">
+        select * from days d
+        where d.time between #{startTime} and #{endTime}
+        # stay
+        <if test='type == "stay"'>
+            and d.id in (select id from days_layout where inTime &lt; #{startTime} and outTime &gt; #{startTime} and
+            layout = #{layout} and day = #{day})
+            and d.id in (select id from days_layout where inTime &lt; #{endTime} and outTime &gt; #{endTime} and
+            layout = #{layout} and day = #{day})
+        </if>
+        # out
+        <if test='type == "out"'>
+            and d.id in (select id from days_layout where inTime &lt; #{startTime} and outTime &gt; #{startTime} and
+            layout = #{layout} and day = #{day})
+            and d.id not in (select id from days_layout where inTime &lt; #{endTime} and outTime &gt; #{endTime} and
+            layout = #{layout} and day = #{day})
+        </if>
+        # in
+        <if test='type == "in"'>
+            and d.id not in (select id from days_layout where inTime &lt; #{startTime} and outTime &gt; #{startTime} and
+            layout = #{layout} and day = #{day})
+            and d.id in (select id from days_layout where inTime &lt; #{endTime} and outTime &gt; #{endTime} and
+            layout = #{layout} and day = #{day})
+        </if>
+        # cur
+        <if test='type == "cur"'>
+            and sid IN (SELECT sid from sensor where layout = #{layout})
+        </if>
+        and day = #{day}
+        ORDER BY d.time
+    </select>
+
+    <!--sid与人流量-->
+    <select id="selectSensorConferee" resultMap="BaseResultMap">
+        SELECT *
+        FROM days
+        WHERE sid IN
+              (
+                  SELECT sid
+                  FROM sensor
+                  WHERE layout = #{layout}
+              )
+    </select>
+
+
+</mapper>
